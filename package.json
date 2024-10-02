@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.7"
-  },
-  "username": "mdaniela.rodriguez@udea.edu.co",
-  "password": "udea2024"
+  }
+
 }

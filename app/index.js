@@ -1,67 +1,43 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const mysql = require('mysql2/promise');
+const pool = require('./connection-test');
 
 const app = express();
 const port = 5000;
 
-
+// Middleware setup
 app.use(cors({ origin: ['http://localhost:3000'], credentials: true }));
-
 app.use(express.json());
 
-// Aquí vamos a conectar la base de datos en algún momento
-/*const users = [
-  {
-    username: 'mdaniela.rodriguez@udea.edu.co',
-    password: bcrypt.hashSync('udea2024', 10),
-  },
-];*/
-
-const pool = mysql.createPool({
-  host: '127.0.0.1',
-  user: 'root',
-  password: 'Daniela04.',
-  database: 'atv'
-});
-
-module.exports = {
-pool
-};
-
-// Ruta de Login
+// Login endpoint
 app.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    const [rows] = await db.pool.execute('SELECT * FROM usuarios WHERE username = ?', [username]);
+    // Query the database for the user
+    const [rows] = await pool.execute('SELECT * FROM usuario WHERE email = ?', [email]);
     const user = rows[0];
 
+    if (!user) {
+      return res.status(401).json({ message: 'Usuario no encontrado' });
+    }
 
-      if (!user) {
-          return res.status(401).json({ message: 'Usuario no encontrado' });
-      }
+    if (user.password !== password) {
+      return res.status(401).json({ message: 'Contraseña incorrecta' });
+    }
 
-      const isMatch = await bcrypt.compare(password, user.password);
+    // Generate a JWT token
+    const token = jwt.sign({ id: user.id, email: user.email }, 'your_jwt_secret_key', { expiresIn: '1h' });
 
-      if (!isMatch) {
-          return res.status(401).json({ message: 'Contraseña incorrecta'   
-});
-      }
-
-      // Genera el token JWT (asegúrate de adaptar el payload y la clave secreta)
-      const token = jwt.sign({ userId: user.id }, 'tu_clave_secreta', { expiresIn: '1h' });
-
-      res.json({ token });
+    return res.json({ token });
   } catch (error) {
-      console.error('Error durante el inicio de sesión:', error);
-      res.status(500).json({ message: 'Error en el servidor' });
+    console.error('Error during login:', error);
+    return res.status(500).json({ message: 'Error en el servidor' });
   }
 });
 
-// Iniciar el servidor
+// Server startup
 app.listen(port, () => {
-  console.log(`Servidor escuchando en el puerto ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
